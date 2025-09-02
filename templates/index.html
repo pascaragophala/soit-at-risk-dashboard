@@ -99,43 +99,43 @@
 
     <!-- Charts -->
     <section class="grid grid-2">
-      <div class="card">
+      <div class="card" id="riskCard">
         <h3 class="card__title">Risk level breakdown</h3>
-        <canvas id="riskChart" height="200"></canvas>
+        <div class="chart h-260"><canvas id="riskChart"></canvas></div>
       </div>
-      <div class="card">
+      <div class="card" id="reasonCard">
         <h3 class="card__title">Top reasons</h3>
-        <canvas id="reasonChart" height="200"></canvas>
+        <div class="chart h-260"><canvas id="reasonChart"></canvas></div>
       </div>
     </section>
 
     <section class="grid grid-2">
       <div class="card">
         <h3 class="card__title">Modules (unique students)</h3>
-        <!-- Height set dynamically in JS based on bar count -->
-        <div class="chart-wrap"><canvas id="moduleChart"></canvas></div>
+        <!-- Dynamic height via JS, clamped -->
+        <div class="chart" id="moduleChartWrap"><canvas id="moduleChart"></canvas></div>
       </div>
-      <div class="card">
+      <div class="card" id="resolvedCard">
         <h3 class="card__title">Resolved status</h3>
-        <canvas id="resolvedChart" height="220"></canvas>
+        <div class="chart h-260"><canvas id="resolvedChart"></canvas></div>
       </div>
     </section>
 
     <section class="grid grid-2">
-      <div class="card">
+      <div class="card" id="weekRiskCard">
         <h3 class="card__title">Weekly trend by risk level</h3>
-        <canvas id="weekRiskChart" height="260"></canvas>
+        <div class="chart h-300"><canvas id="weekRiskChart"></canvas></div>
       </div>
-      <div class="card">
+      <div class="card" id="nonAttendanceCard">
         <h3 class="card__title">Non-attendance trend by week</h3>
-        <canvas id="nonAttendanceChart" height="260"></canvas>
+        <div class="chart h-300"><canvas id="nonAttendanceChart"></canvas></div>
       </div>
     </section>
 
     {% if report.resolved_rate and report.resolved_rate|length > 0 %}
-    <section class="card">
+    <section class="card" id="resolvedRateCard">
       <h3 class="card__title">Resolved rate by week (%)</h3>
-      <canvas id="resolvedRateChart" height="260"></canvas>
+      <div class="chart h-300"><canvas id="resolvedRateChart"></canvas></div>
     </section>
     {% endif %}
 
