@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOIT At-Risk Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>SOIT At-Risk Dashboard</h1>
+    <p>Upload your Excel file to see quick insights. Works best with columns like Student Number, Student Name, Module(s), Week, Year, Reason for AR, Risk Level, Resolved?</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="upload-form">
+        <label for="file">Choose Excel file (.xlsx / .xls)</label>
+        <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
+        <button type="submit">Analyze</button>
+      </form>
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
+    </section>
+
+    {% if report %}
+    <section class="grid grid-3">
+      <div class="metric card">
+        <h3>Total Records</h3>
+        <p class="metric-value">{{ report.total_records }}</p>
+      </div>
+      <div class="metric card">
+        <h3>Unique Students</h3>
+        <p class="metric-value">{{ report.unique_students or "N/A" }}</p>
+      </div>
+      <div class="metric card">
+        <h3>Uploaded File</h3>
+        <p class="metric-value">{{ filename }}</p>
+      </div>
+    </section>
+
+    <section class="grid grid-2">
+      <div class="card">
+        <h3>Risk Level Breakdown</h3>
+        <canvas id="riskChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Top Reasons</h3>
+        <canvas id="reasonChart"></canvas>
+      </div>
+    </section>
+
+    <section class="grid grid-2">
+      <div class="card">
+        <h3>Top Modules (unique students flagged)</h3>
+        <canvas id="moduleChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Resolved Status</h3>
+        <canvas id="resolvedChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Weekly Trend by Risk Level</h3>
+      <canvas id="weekRiskChart"></canvas>
+    </section>
+
+    {% if report.repeated_students and report.repeated_students.top_counts %}
+    <section class="card">
+      <h3>Students Flagged Multiple Times (Top 50)</h3>
+      <details>
+        <summary>Show preview rows</summary>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                {% set headers = report.repeated_students.preview_rows[0].keys() %}
+                {% for h in headers %}<th>{{ h }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in report.repeated_students.preview_rows %}
+              <tr>
+                {% for h in headers %}<td>{{ row[h] }}</td>{% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <h3>Sample Rows (first 50)</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            {% set sample_headers = report.sample_rows[0].keys() %}
+            <tr>
+              {% for h in sample_headers %}<th>{{ h }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.sample_rows %}
+            <tr>
+              {% for h in sample_headers %}<td>{{ row[h] }}</td>{% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <script>
+      window.__REPORT__ = {{ report | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% endif %}
+  </main>
+
+  <footer>
+    <p>Built for quick reviews and weekly check-ins.</p>
+  </footer>
+</body>
+</html>
