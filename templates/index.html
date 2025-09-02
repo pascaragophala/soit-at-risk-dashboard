@@ -19,7 +19,6 @@
           <p class="muted">Upload your Excel file to get clear, quick insights.</p>
         </div>
       </div>
-
       <div class="toolbar">
         <button id="themeToggle" class="btn btn-outline" aria-label="Toggle theme">Dark mode</button>
       </div>
@@ -44,6 +43,43 @@
     </section>
 
     {% if report %}
+    <!-- Filters -->
+    <section class="card">
+      <div class="filters">
+        <div class="filters__group">
+          <label for="weekFilter">Week</label>
+          <select id="weekFilter">
+            <option value="">All weeks</option>
+            {% for w in report.weeks %}<option value="{{ w }}">{{ w }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="filters__group">
+          <label for="moduleScope">Modules</label>
+          <select id="moduleScope" title="Pick how to show modules">
+            <option value="all">All modules (all reasons)</option>
+            <option value="top3_att">Top 3 (non-attendance)</option>
+            <option value="top5_att">Top 5 (non-attendance)</option>
+            <option value="top10_att">Top 10 (non-attendance)</option>
+          </select>
+        </div>
+
+        <div class="filters__group">
+          <label for="moduleBasis">Basis</label>
+          <select id="moduleBasis" title="Which data to use for the module chart">
+            <option value="all">All reasons</option>
+            <option value="attendance">Non-attendance only</option>
+          </select>
+        </div>
+
+        <div class="filters__group">
+          <button id="applyFilters" class="btn btn-outline">Apply filters</button>
+          <button id="resetFilters" class="btn btn-outline">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics -->
     <section class="grid grid-3">
       <div class="metric card">
         <div class="metric__title">Total records</div>
@@ -61,6 +97,7 @@
       </div>
     </section>
 
+    <!-- Charts -->
     <section class="grid grid-2">
       <div class="card">
         <h3 class="card__title">Risk level breakdown</h3>
@@ -74,8 +111,9 @@
 
     <section class="grid grid-2">
       <div class="card">
-        <h3 class="card__title">Top modules (unique students flagged)</h3>
-        <canvas id="moduleChart" height="220"></canvas>
+        <h3 class="card__title">Modules (unique students)</h3>
+        <!-- Height set dynamically in JS based on bar count -->
+        <div class="chart-wrap"><canvas id="moduleChart"></canvas></div>
       </div>
       <div class="card">
         <h3 class="card__title">Resolved status</h3>
@@ -83,10 +121,23 @@
       </div>
     </section>
 
-    <section class="card">
-      <h3 class="card__title">Weekly trend by risk level</h3>
-      <canvas id="weekRiskChart" height="260"></canvas>
+    <section class="grid grid-2">
+      <div class="card">
+        <h3 class="card__title">Weekly trend by risk level</h3>
+        <canvas id="weekRiskChart" height="260"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="card__title">Non-attendance trend by week</h3>
+        <canvas id="nonAttendanceChart" height="260"></canvas>
+      </div>
     </section>
+
+    {% if report.resolved_rate and report.resolved_rate|length > 0 %}
+    <section class="card">
+      <h3 class="card__title">Resolved rate by week (%)</h3>
+      <canvas id="resolvedRateChart" height="260"></canvas>
+    </section>
+    {% endif %}
 
     {% if report.repeated_students and report.repeated_students.top_counts %}
     <section class="card">
@@ -143,7 +194,7 @@
 
   <footer class="footer">
     <div class="container">
-      <p class="muted tiny">Built for quick reviews and weekly check-ins.</p>
+      <p class="muted tiny">Powered by Pasca Ragophala.</p>
     </div>
   </footer>
 
