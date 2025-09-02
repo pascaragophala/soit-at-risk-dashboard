@@ -4,75 +4,98 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SOIT At-Risk Dashboard</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header>
-    <h1>SOIT At-Risk Dashboard</h1>
-    <p>Upload your Excel file to see quick insights. Works best with columns like Student Number, Student Name, Module(s), Week, Year, Reason for AR, Risk Level, Resolved?</p>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <div class="brand">
+        <div class="logo">SR</div>
+        <div class="brand__text">
+          <h1>SOIT At-Risk Dashboard</h1>
+          <p class="muted">Upload your Excel file to get clear, quick insights.</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button id="themeToggle" class="btn btn-outline" aria-label="Toggle theme">Dark mode</button>
+      </div>
+    </div>
   </header>
 
-  <main>
-    <section class="card">
-      <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="upload-form">
-        <label for="file">Choose Excel file (.xlsx / .xls)</label>
-        <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
-        <button type="submit">Analyze</button>
+  <main class="container">
+    <section class="card card--pad-lg">
+      <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="upload">
+        <label for="file" class="upload__label">Choose Excel file (.xlsx or .xls)</label>
+        <div class="upload__row">
+          <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
+          <button type="submit" class="btn">Analyze</button>
+        </div>
+        {% if filename %}
+        <p class="muted tiny">Last uploaded: <strong>{{ filename }}</strong></p>
+        {% endif %}
       </form>
       {% if error %}
-      <div class="error">{{ error }}</div>
+      <div class="alert alert--error">{{ error }}</div>
       {% endif %}
     </section>
 
     {% if report %}
     <section class="grid grid-3">
       <div class="metric card">
-        <h3>Total Records</h3>
-        <p class="metric-value">{{ report.total_records }}</p>
+        <div class="metric__title">Total records</div>
+        <div class="metric__value">{{ report.total_records }}</div>
       </div>
       <div class="metric card">
-        <h3>Unique Students</h3>
-        <p class="metric-value">{{ report.unique_students or "N/A" }}</p>
+        <div class="metric__title">Unique students</div>
+        <div class="metric__value">{{ report.unique_students or "N/A" }}</div>
       </div>
       <div class="metric card">
-        <h3>Uploaded File</h3>
-        <p class="metric-value">{{ filename }}</p>
+        <div class="metric__title">Data quality</div>
+        <div class="metric__value">
+          {% if report.risk_counts and report.sample_rows %}Good{% else %}Limited{% endif %}
+        </div>
       </div>
     </section>
 
     <section class="grid grid-2">
       <div class="card">
-        <h3>Risk Level Breakdown</h3>
-        <canvas id="riskChart"></canvas>
+        <h3 class="card__title">Risk level breakdown</h3>
+        <canvas id="riskChart" height="200"></canvas>
       </div>
       <div class="card">
-        <h3>Top Reasons</h3>
-        <canvas id="reasonChart"></canvas>
+        <h3 class="card__title">Top reasons</h3>
+        <canvas id="reasonChart" height="200"></canvas>
       </div>
     </section>
 
     <section class="grid grid-2">
       <div class="card">
-        <h3>Top Modules (unique students flagged)</h3>
-        <canvas id="moduleChart"></canvas>
+        <h3 class="card__title">Top modules (unique students flagged)</h3>
+        <canvas id="moduleChart" height="220"></canvas>
       </div>
       <div class="card">
-        <h3>Resolved Status</h3>
-        <canvas id="resolvedChart"></canvas>
+        <h3 class="card__title">Resolved status</h3>
+        <canvas id="resolvedChart" height="220"></canvas>
       </div>
     </section>
 
     <section class="card">
-      <h3>Weekly Trend by Risk Level</h3>
-      <canvas id="weekRiskChart"></canvas>
+      <h3 class="card__title">Weekly trend by risk level</h3>
+      <canvas id="weekRiskChart" height="260"></canvas>
     </section>
 
     {% if report.repeated_students and report.repeated_students.top_counts %}
     <section class="card">
-      <h3>Students Flagged Multiple Times (Top 50)</h3>
-      <details>
-        <summary>Show preview rows</summary>
+      <div class="card__header">
+        <h3 class="card__title">Students flagged multiple times</h3>
+        <span class="muted tiny">Top 50 by count</span>
+      </div>
+      <details class="details">
+        <summary class="details__summary">Show preview rows</summary>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -95,7 +118,8 @@
     {% endif %}
 
     <section class="card">
-      <h3>Sample Rows (first 50)</h3>
+      <h3 class="card__title">Sample rows</h3>
+      <p class="muted tiny">First 50 rows to sanity check the dataset.</p>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -114,16 +138,18 @@
         </table>
       </div>
     </section>
-
-    <script>
-      window.__REPORT__ = {{ report | tojson }};
-    </script>
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
     {% endif %}
   </main>
 
-  <footer>
-    <p>Built for quick reviews and weekly check-ins.</p>
+  <footer class="footer">
+    <div class="container">
+      <p class="muted tiny">Built for quick reviews and weekly check-ins.</p>
+    </div>
   </footer>
+
+  {% if report %}
+  <script>window.__REPORT__ = {{ report | tojson }};</script>
+  {% endif %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
