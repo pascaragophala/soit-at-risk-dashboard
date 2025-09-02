@@ -9,19 +9,44 @@ ALLOWED_EXTENSIONS = {"xlsx", "xls"}
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def _counts_to_json_safe(series: pd.Series) -> dict:
+    """
+    Convert a value_counts() series to a dict with STRING keys and INT values.
+    Also maps NaN/None to 'Unknown' as a key.
+    """
+    safe = {}
+    for k, v in series.items():
+        key = "Unknown" if (pd.isna(k) or k is None) else str(k)
+        try:
+            safe[key] = int(v)
+        except Exception:
+            safe[key] = int(pd.to_numeric([v])[0])
+    return safe
+
+def _list_int(values) -> list:
+    """Convert any numpy ints to plain Python ints inside a list."""
+    out = []
+    for x in list(values):
+        try:
+            out.append(int(x))
+        except Exception:
+            # last resort, convert via pandas
+            out.append(int(pd.to_numeric([x])[0]))
+    return out
+
 def build_report(df: pd.DataFrame):
     df = df.copy()
     df.columns = [str(c).strip() for c in df.columns]
 
-    # Try match likely column names
+    # Likely column names from your sheet
     col_student = next((c for c in df.columns if c.lower().startswith("student number")), None)
-    col_name = next((c for c in df.columns if c.lower().startswith("student name")), None)
-    col_module = next((c for c in df.columns if c.lower().startswith("module")), None)
-    col_year = next((c for c in df.columns if c.lower() == "year"), None)
-    col_week = next((c for c in df.columns if c.lower() == "week"), None)
-    col_reason = next((c for c in df.columns if "reason" in c.lower()), None)
-    col_risk = next((c for c in df.columns if "risk" in c.lower()), None)
-    col_resolved = next((c for c in df.columns if "resolved" in c.lower()), None)
+    col_name    = next((c for c in df.columns if c.lower().startswith("student name")), None)
+    col_module  = next((c for c in df.columns if c.lower().startswith("module")), None)
+    col_year    = next((c for c in df.columns if c.lower() == "year"), None)
+    col_week    = next((c for c in df.columns if c.lower() == "week"), None)
+    col_reason  = next((c for c in df.columns if "reason" in c.lower()), None)
+    col_risk    = next((c for c in df.columns if "risk" in c.lower()), None)
+    col_resolved= next((c for c in df.columns if "resolved" in c.lower()), None)
 
     # Normalize dtypes for JSON
     if col_week and df[col_week].notna().any():
@@ -32,21 +57,23 @@ def build_report(df: pd.DataFrame):
     total_records = int(len(df))
     unique_students = int(df[col_student].nunique()) if col_student else None
 
-    risk_counts = df[col_risk].value_counts(dropna=False).to_dict() if col_risk else {}
-    resolved_counts = df[col_resolved].value_counts(dropna=False).to_dict() if col_resolved else {}
+    # Counts dicts (JSON-safe)
+    risk_counts     = _counts_to_json_safe(df[col_risk].value_counts(dropna=False)) if col_risk else {}
+    resolved_counts = _counts_to_json_safe(df[col_resolved].value_counts(dropna=False)) if col_resolved else {}
+    by_reason       = _counts_to_json_safe(df[col_reason].value_counts().head(15)) if col_reason else {}
 
+    # Top modules by unique students (force str keys & int values)
     by_module = {}
     if col_module and col_student:
-        by_module = (
+        tmp = (
             df.groupby(col_module)[col_student]
             .nunique()
             .sort_values(ascending=False)
             .head(15)
-            .to_dict()
         )
+        by_module = {str(k): int(v) for k, v in tmp.items()}
 
-    by_reason = df[col_reason].value_counts().head(15).to_dict() if col_reason else {}
-
+    # Week × Risk pivot (lists of plain ints)
     week_risk = {}
     if col_week and col_risk:
         pivot = df.pivot_table(
@@ -57,10 +84,9 @@ def build_report(df: pd.DataFrame):
             fill_value=0,
         )
 
-        # Sort weeks like Week1, Week2, ... if that pattern exists
+        # Sort Week1, Week2, ... correctly if that pattern exists
         def _week_key(s):
             try:
-                # extract first number found
                 import re
                 nums = s.astype(str).str.extract(r"(\d+)", expand=False)
                 return nums.fillna("0").astype(int)
@@ -69,10 +95,14 @@ def build_report(df: pd.DataFrame):
 
         pivot = pivot.sort_index(key=_week_key)
         week_risk = {
-            "weeks": list(pivot.index.astype(str)),
-            "series": [{"name": str(c), "data": list(pivot[c].astype(int).values)} for c in pivot.columns],
+            "weeks": [str(x) for x in list(pivot.index)],
+            "series": [
+                {"name": str(c), "data": _list_int(pivot[c].values)}
+                for c in pivot.columns
+            ],
         }
 
+    # Students with repeated flags
     repeated_students = {}
     if col_student:
         counts = df.groupby(col_student).size().sort_values(ascending=False)
@@ -81,7 +111,7 @@ def build_report(df: pd.DataFrame):
             preview_cols = [c for c in [col_student, col_name, col_module, col_week, col_risk] if c in df.columns]
             preview = df[df[col_student].isin(repeated.index)][preview_cols].copy().head(200)
             repeated_students = {
-                "top_counts": repeated.to_dict(),
+                "top_counts": {str(k): int(v) for k, v in repeated.items()},
                 "preview_rows": preview.fillna("").astype(str).to_dict(orient="records"),
             }
 
@@ -118,7 +148,6 @@ def create_app():
 
         filename = secure_filename(file.filename)
         try:
-            # Read into memory and parse with pandas
             data = BytesIO(file.read())
             try:
                 df = pd.read_excel(data)
